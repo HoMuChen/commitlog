@@ -1,10 +1,16 @@
 package commitlog
 
 import (
+        "errors"
         "io/ioutil"
         "os"
         "strconv"
         "strings"
+)
+
+var (
+        ErrorRecordNotFound = errors.New("Record Not Found")
+        ErrorSegmentNotFound = errors.New("Segment Not Found")
 )
 
 const (
@@ -125,6 +131,28 @@ func (cl *CommitLog) Append(data []byte) (int, error) {
         }
 
         return offset, nil
+}
+
+func (cl *CommitLog) Read(offset int) ([]byte, error) {
+        i, err := cl.findSegmentIndex(offset)
+        if err != nil {
+                return nil, err
+        }
+
+        return cl.segments[i].Read(offset)
+}
+
+func (cl *CommitLog) findSegmentIndex(offset int) (int, error) {
+        for i := 0; i < len(cl.segments)-1; i++ {
+                if offset < cl.segments[i].baseOffset {
+                        return -1, ErrorSegmentNotFound
+                }
+                if offset >= cl.segments[i].baseOffset && offset < cl.segments[i+1].baseOffset {
+                        return i, nil
+                }
+        }
+
+        return len(cl.segments) - 1, nil
 }
 
 func (cl *CommitLog) Offset() int {

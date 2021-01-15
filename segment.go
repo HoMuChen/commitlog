@@ -13,12 +13,13 @@ const (
 
 type segment struct {
         path            string
+        options         *Options
         f               *os.File
         index           *Index
-        options         *Options
-        baseOffset      int
-        count           int
-        position        int
+        //timeIndex     *TimeIndex //TODO: index for retention policy
+        baseOffset      int        // first record offset, same as file name
+        count           int        // relative offset in this segemnt
+        position        int        // relative byte position in this segment file of next record
         isLoaded        bool
         isFull          bool
 }
@@ -66,16 +67,11 @@ func (seg *segment) Load() error {
 }
 
 func (seg *segment) CheckFull(data []byte) bool {
-        if seg.isFull {
-                return true
-        }
-
         if !seg.isLoaded {
                 seg.Load()
         }
 
         if len(data) + seg.position > seg.options.MaxSegmentSize {
-                seg.isFull = true
                 return true
         }
 
@@ -94,6 +90,37 @@ func (seg *segment) Write(data []byte) error {
         seg.count += 1
 
         return nil
+}
+
+func (seg *segment) Read(offset int) ([]byte, error) {
+        from, to, err := seg.getRecordPosition(offset)
+        if err != nil {
+                return nil, err
+        }
+
+        data := make([]byte, to - from)
+
+        _, err = seg.f.ReadAt(data, int64(from))
+        if err != nil {
+                return nil, err
+        }
+
+        return data, nil
+}
+
+func (seg *segment) getRecordPosition(offset int) (from, to int, err error) {
+        indexData := seg.index.Data()
+        position, ok := indexData[offset - seg.baseOffset]
+        if !ok {
+                return -1, -1, ErrorRecordNotFound
+        }
+        nextPosition, ok := indexData[offset - seg.baseOffset + 1]
+        //last record
+        if !ok {
+                return position, seg.position, nil
+        }
+
+        return position, nextPosition, nil
 }
 
 func (seg *segment) NextOffset() int {

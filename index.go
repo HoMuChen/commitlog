@@ -16,7 +16,7 @@ type Index struct {
         Path            string
         f               *os.File
         baseOffset      int
-        data            map[int]int
+        data            map[int]int //in-momery index data
 }
 
 func NewIndex(dir string, offset int, options *Options) (*Index, error) {
@@ -32,17 +32,14 @@ func NewIndex(dir string, offset int, options *Options) (*Index, error) {
                 Path:           path,
                 f:              f,
                 baseOffset:     offset,
+                data:           make(map[int]int),
         }
 
         return idx, nil
 }
 
+//Populate in-memory data, loading from disk
 func (idx *Index) Load() error {
-        if idx.data == nil {
-                idx.data = make(map[int]int)
-        }
-
-        idx.f.Seek(0, 0)
         data, err := ioutil.ReadAll(idx.f)
         if err != nil {
                 return err
@@ -62,16 +59,14 @@ func (idx *Index) Load() error {
 }
 
 func (idx *Index) Count() int {
-        if idx.data == nil {
-                idx.Load()
-        }
-
         return len(idx.data)
 }
 
 func (idx *Index) Write(offset int, position int) error {
         data := idx.encodeIndexRecord(offset, position)
         _, err := idx.f.Write(data)
+
+        idx.data[offset] = position
 
         return err
 }
