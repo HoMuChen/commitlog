@@ -1,13 +1,22 @@
 package commitlog
 
 import (
+        "encoding/binary"
+        "errors"
         "fmt"
+        "math"
         "os"
         "path/filepath"
 )
 
+var (
+        ErrorExceedMaxRecordSize = errors.New("Record is too big")
+)
+
 const (
-        SegExt = ".log"
+        SegExt           = ".log"
+
+        maxRecordSize    = math.MaxUint16
 )
 
 type segment struct {
@@ -90,17 +99,36 @@ func (seg *segment) CheckFull(data []byte) bool {
 }
 
 func (seg *segment) Write(data []byte) error {
-        n, err := seg.f.Write(data)
+        if len(data) > maxRecordSize {
+                return ErrorExceedMaxRecordSize
+        }
+
+        record := seg.encodeSegmentRecord(data)
+
+        n, err := seg.f.Write(record)
         if err != nil {
                 return err
         }
 
         seg.index.Write(seg.count, seg.position)
 
-        seg.position += n
         seg.count += 1
+        seg.position += n
 
         return nil
+}
+
+// Segemnt record
+// + --------------- + ----- +
+// | Value Size (2B) | Value |
+// + --------------- + ----- +
+func (seg *segment) encodeSegmentRecord(data []byte) []byte {
+        buf := make([]byte, 2 + len(data))
+
+        binary.LittleEndian.PutUint16(buf[:2], uint16(len(data)))
+        copy(buf[2:], data)
+
+        return buf
 }
 
 func (seg *segment) Read(offset int) ([]byte, error) {
@@ -116,7 +144,7 @@ func (seg *segment) Read(offset int) ([]byte, error) {
                 return nil, err
         }
 
-        return data, nil
+        return data[2:], nil
 }
 
 func (seg *segment) getRecordPosition(offset int) (from, to int, err error) {

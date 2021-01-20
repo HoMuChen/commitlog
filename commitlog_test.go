@@ -37,14 +37,14 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewSegment(t *testing.T) {
-        cl, err := commitlog.New("test.db", &commitlog.Options{20}) //20 bytes max segment size
+        cl, err := commitlog.New("test.db", &commitlog.Options{30}) //30 bytes max segment size
         if err != nil {
                 t.Error(err)
         }
 
-        cl.Append([]byte(`0123456789`)) //10 bytes
-        cl.Append([]byte(`0123456789`)) //10 bytes
-        cl.Append([]byte(`0123456789`)) //10 bytes, open another new segment
+        cl.Append([]byte(`0123456789`)) //(4 + 10) bytes
+        cl.Append([]byte(`0123456789`)) //(4 + 10) bytes
+        cl.Append([]byte(`0123456789`)) //(4 + 10) bytes, open another new segment
 
         total := cl.Offset()
 
