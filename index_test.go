@@ -25,10 +25,10 @@ func TestWrite(t *testing.T) {
         index.Write(2, 2)
         index.Sync()
         index.Load()
-        data := index.Data()
 
-        if data[0] != 0 || data[1] != 1 || data[2] != 2 {
-                t.Error("Incorrect in memory hash table data")
+        pos, _ := index.Get(0)
+        if pos != 0 {
+                t.Errorf("Expect 0 but got: %v", pos)
         }
 
         cleanupIndex()
@@ -52,12 +52,11 @@ func TestReopen(t *testing.T) {
         if err != nil {
                 t.Error(err)
         }
-
         index.Load()
-        data := index.Data()
 
-        if data[0] != 0 || data[1] != 1 || data[2] != 2 {
-                t.Error("Incorrect in memory hash table data")
+        pos, _ := index.Get(0)
+        if pos != 0 {
+                t.Errorf("Expect 0 but got: %v", pos)
         }
 
         cleanupIndex()

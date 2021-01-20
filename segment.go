@@ -2,7 +2,6 @@ package commitlog
 
 import (
         "fmt"
-        "io/ioutil"
         "os"
         "path/filepath"
 )
@@ -53,16 +52,28 @@ func (seg *segment) Load() error {
         if err := seg.index.Load(); err != nil {
                 return err
         }
+        seg.count = seg.index.Count()
 
-        data, err := ioutil.ReadAll(seg.f)
+        fi, err := seg.f.Stat()
         if err != nil {
                 return err
         }
+        seg.position = int(fi.Size())
 
-        seg.position = len(data)
         seg.isLoaded = true
-        seg.count = seg.index.Count()
 
+        // inconsistency between log file and index file
+        if lastIndexPosition, ok := seg.index.Get(seg.count); !ok || lastIndexPosition != seg.position {
+                if err := seg.Recover(); err != nil {
+                        return err
+                }
+        }
+
+        return nil
+}
+
+//TODO
+func (seg *segment) Recover() error {
         return nil
 }
 
@@ -109,12 +120,11 @@ func (seg *segment) Read(offset int) ([]byte, error) {
 }
 
 func (seg *segment) getRecordPosition(offset int) (from, to int, err error) {
-        indexData := seg.index.Data()
-        position, ok := indexData[offset - seg.baseOffset]
+        position, ok := seg.index.Get(offset - seg.baseOffset)
         if !ok {
                 return -1, -1, ErrorRecordNotFound
         }
-        nextPosition, ok := indexData[offset - seg.baseOffset + 1]
+        nextPosition, ok := seg.index.Get(offset - seg.baseOffset + 1)
         //last record
         if !ok {
                 return position, seg.position, nil
@@ -125,6 +135,12 @@ func (seg *segment) getRecordPosition(offset int) (from, to int, err error) {
 
 func (seg *segment) NextOffset() int {
         return seg.baseOffset + seg.count
+}
+
+func (seg *segment) ClearCache() error {
+        seg.index.ClearCache()
+
+        return nil
 }
 
 func (seg *segment) Sync() (err error) {

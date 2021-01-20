@@ -1,6 +1,7 @@
 package commitlog
 
 import (
+        "bufio"
         "encoding/binary"
         "fmt"
         "io/ioutil"
@@ -15,6 +16,7 @@ const (
 type Index struct {
         Path            string
         f               *os.File
+        writer          *bufio.Writer
         baseOffset      int
         data            map[int]int //in-momery index data
 }
@@ -31,6 +33,7 @@ func NewIndex(dir string, offset int, options *Options) (*Index, error) {
         idx := &Index{
                 Path:           path,
                 f:              f,
+                writer:         bufio.NewWriter(f),
                 baseOffset:     offset,
                 data:           make(map[int]int),
         }
@@ -64,7 +67,7 @@ func (idx *Index) Count() int {
 
 func (idx *Index) Write(offset int, position int) error {
         data := idx.encodeIndexRecord(offset, position)
-        _, err := idx.f.Write(data)
+        _, err := idx.writer.Write(data)
 
         idx.data[offset] = position
 
@@ -80,12 +83,20 @@ func (idx *Index) encodeIndexRecord(offset int, position int) []byte {
         return buf[:of+pos]
 }
 
-func (idx *Index) Data() map[int]int {
-        return idx.data
+func (idx *Index) Get(offset int) (int, bool) {
+        pos, found := idx.data[offset]
+
+        return pos, found
+}
+
+func (idx *Index) ClearCache() error {
+        idx.data = make(map[int]int)
+
+        return nil
 }
 
 func (idx *Index) Sync() error {
-        return idx.f.Sync()
+        return idx.writer.Flush()
 }
 
 func (idx *Index) Close() error {

@@ -121,6 +121,12 @@ func TestReadRecordNotExist(t *testing.T) {
         cleanup(cl)
 }
 
+func BenchmarkWrite256B(b *testing.B) {
+        benchmarkWriteSize(b, 256)
+}
+func BenchmarkWrite512B(b *testing.B) {
+        benchmarkWriteSize(b, 512)
+}
 func BenchmarkWrite1KB(b *testing.B) {
         benchmarkWriteSize(b, 1024)
 }

@@ -109,6 +109,10 @@ func (cl *CommitLog) createNewSegment(offset int) error {
                 return err
         }
 
+        if cl.curSegment != nil {
+                cl.curSegment.ClearCache()
+        }
+
         cl.segments = append(cl.segments, seg)
         cl.curSegment = seg
 
