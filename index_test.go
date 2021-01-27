@@ -1,10 +1,8 @@
-package commitlog_test
+package commitlog
 
 import (
         "os"
         "testing"
-
-        "github.com/HoMuChen/commitlog"
 )
 
 const (
@@ -12,9 +10,9 @@ const (
 )
 
 func TestWrite(t *testing.T) {
-        setupIndexDir(INDEX_DIR)
+        setupDir(INDEX_DIR)
 
-        index, err := commitlog.NewIndex(INDEX_DIR, 0, nil)
+        index, err := NewIndex(INDEX_DIR, 0, nil)
 
         if err != nil {
                 t.Error(err)
@@ -31,13 +29,13 @@ func TestWrite(t *testing.T) {
                 t.Errorf("Expect 0 but got: %v", pos)
         }
 
-        cleanupIndex()
+        cleanupDir(INDEX_DIR)
 }
 
 func TestReopen(t *testing.T) {
-        setupIndexDir(INDEX_DIR)
+        setupDir(INDEX_DIR)
 
-        index, err := commitlog.NewIndex(INDEX_DIR, 1, nil)
+        index, err := NewIndex(INDEX_DIR, 1, nil)
         if err != nil {
                 t.Error(err)
         }
@@ -48,7 +46,7 @@ func TestReopen(t *testing.T) {
         index.Sync()
         index.Close()
 
-        index, err = commitlog.NewIndex("index.db", 1, nil)
+        index, err = NewIndex("index.db", 1, nil)
         if err != nil {
                 t.Error(err)
         }
@@ -59,13 +57,13 @@ func TestReopen(t *testing.T) {
                 t.Errorf("Expect 0 but got: %v", pos)
         }
 
-        cleanupIndex()
+        cleanupDir(INDEX_DIR)
 }
 
-func setupIndexDir(path string) {
+func setupDir(path string) {
         os.MkdirAll(path, 0755)
 }
 
-func cleanupIndex() {
-	os.RemoveAll(INDEX_DIR)
+func cleanupDir(path string) {
+	os.RemoveAll(path)
 }

@@ -7,6 +7,7 @@ import (
         "math"
         "os"
         "path/filepath"
+        "time"
 )
 
 var (
@@ -24,7 +25,7 @@ type segment struct {
         options         *Options
         f               *os.File
         index           *Index
-        //timeIndex     *TimeIndex //TODO: index for retention policy
+        timeindex       *timeIndex // timestamp index for retention policy
         baseOffset      int        // first record offset, same as file name
         count           int        // relative offset in this segemnt
         position        int        // relative byte position in this segment file of next record
@@ -46,12 +47,18 @@ func NewSegment(dir string, offset int, options *Options) (*segment, error) {
                 return nil, err
         }
 
+        timeidx, err := NewTimeIndex(dir, offset, options)
+        if err != nil {
+                return nil, err
+        }
+
         seg := &segment{
                 path:           path,
                 f:              f,
                 options:        options,
                 baseOffset:     offset,
                 index:          idx,
+                timeindex:      timeidx,
         }
 
         return seg, nil
@@ -111,6 +118,7 @@ func (seg *segment) Write(data []byte) error {
         }
 
         seg.index.Write(seg.count, seg.position)
+        seg.timeindex.Write(time.Now(), seg.count)
 
         seg.count += 1
         seg.position += n
@@ -165,8 +173,8 @@ func (seg *segment) NextOffset() int {
         return seg.baseOffset + seg.count
 }
 
-func (seg *segment) ClearCache() error {
-        seg.index.ClearCache()
+func (seg *segment) clearCache() error {
+        seg.index.clearCache()
 
         return nil
 }
@@ -183,4 +191,8 @@ func (seg *segment) Close() (err error) {
         err = seg.index.Sync()
 
         return
+}
+
+func (seg *segment) truncateTo(offset int) error {
+        return nil
 }

@@ -89,7 +89,7 @@ func (idx *Index) Get(offset int) (int, bool) {
         return pos, found
 }
 
-func (idx *Index) ClearCache() error {
+func (idx *Index) clearCache() error {
         idx.data = make(map[int]int)
 
         return nil

@@ -1,16 +1,14 @@
-package commitlog_test
+package commitlog
 
 import (
         "bytes"
         "io/ioutil"
         "os"
         "testing"
-
-        "github.com/HoMuChen/commitlog"
 )
 
 func TestNew(t *testing.T) {
-        cl, err := commitlog.New("test.db", nil)
+        cl, err := New("test.db", nil)
         if err != nil {
                 t.Error(err)
         }
@@ -37,7 +35,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewSegment(t *testing.T) {
-        cl, err := commitlog.New("test.db", &commitlog.Options{30}) //30 bytes max segment size
+        cl, err := New("test.db", &Options{30}) //30 bytes max segment size
         if err != nil {
                 t.Error(err)
         }
@@ -54,15 +52,15 @@ func TestNewSegment(t *testing.T) {
 
         files, _ := ioutil.ReadDir("test.db")
 
-        if len(files) != 4 {
-                t.Errorf("Expect 4 files 0.log 0.index 2.log 2.index, but got %v", len(files))
+        if len(files) != 6 {
+                t.Errorf("Expect 6 files 0.log 0.index 0.timeindex, 2.log 2.index 2.timeindex, but got %v", len(files))
         }
 
         cleanup(cl)
 }
 
 func TestRead(t *testing.T) {
-        cl, err := commitlog.New("test.db", nil)
+        cl, err := New("test.db", nil)
         if err != nil {
                 t.Error(err)
         }
@@ -83,7 +81,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestReadLastRecord(t *testing.T) {
-        cl, err := commitlog.New("test.db", nil)
+        cl, err := New("test.db", nil)
         if err != nil {
                 t.Error(err)
         }
@@ -104,7 +102,7 @@ func TestReadLastRecord(t *testing.T) {
 }
 
 func TestReadRecordNotExist(t *testing.T) {
-        cl, err := commitlog.New("test.db", nil)
+        cl, err := New("test.db", nil)
         if err != nil {
                 t.Error(err)
         }
@@ -114,7 +112,7 @@ func TestReadRecordNotExist(t *testing.T) {
         cl.Append([]byte(`789`))
 
         _, err = cl.Read(10)
-        if err != commitlog.ErrorRecordNotFound {
+        if err != ErrorRecordNotFound {
                 t.Errorf("Expect nil error but got: %v", err)
         }
 
@@ -138,7 +136,7 @@ func BenchmarkWrite4KB(b *testing.B) {
 }
 
 func benchmarkWriteSize(b *testing.B, size int) {
-        cl, _ := commitlog.New("test.db", nil)
+        cl, _ := New("test.db", nil)
         data := make([]byte, size)
 
         for i := 0; i < b.N; i++ {
@@ -148,6 +146,6 @@ func benchmarkWriteSize(b *testing.B, size int) {
         cleanup(cl)
 }
 
-func cleanup(cl *commitlog.CommitLog) {
+func cleanup(cl *CommitLog) {
 	os.RemoveAll(cl.Path)
 }
