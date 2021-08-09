@@ -193,6 +193,16 @@ func (seg *segment) Close() (err error) {
         return
 }
 
+func (seg *segment) Remove() (err error) {
+        err = seg.timeindex.Remove()
+        err = seg.index.Remove()
+
+        err = seg.f.Close()
+        err = os.Remove(seg.path)
+
+        return
+}
+
 func (seg *segment) truncateTo(offset int) error {
         return nil
 }

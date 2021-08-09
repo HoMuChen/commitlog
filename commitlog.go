@@ -6,6 +6,8 @@ import (
         "os"
         "strconv"
         "strings"
+        "sync"
+        "time"
 )
 
 var (
@@ -14,7 +16,9 @@ var (
 )
 
 const (
-        DefaultMaxSegmentSize = 20 * 1024 * 1024
+        DefaultMaxSegmentSize           = 20 * 1024 * 1024
+        DefaultCompactionInterval       = 12 * time.Hour
+        DefaultRetentionPolicy          = 7 * 24 * time.Hour
 )
 
 type CommitLog struct {
@@ -22,15 +26,21 @@ type CommitLog struct {
         options         *Options
         segments        []*segment
         curSegment      *segment
+        mu              sync.Mutex
+        workerDone      chan bool
 }
 
 type Options struct {
-        MaxSegmentSize  int
+        MaxSegmentSize          int
+        CompactionInterval      time.Duration
+        RetentionPolicy         time.Duration
 }
 
 func NewDefaultOptions() *Options {
         return &Options{
-                MaxSegmentSize: DefaultMaxSegmentSize,
+                MaxSegmentSize:         DefaultMaxSegmentSize,
+                CompactionInterval:     DefaultCompactionInterval,
+                RetentionPolicy:        DefaultRetentionPolicy,
         }
 }
 
@@ -40,8 +50,9 @@ func New(path string, options *Options) (*CommitLog, error) {
         }
 
         cl := &CommitLog{
-                Path: path,
-                options: options,
+                Path:           path,
+                options:        options,
+                workerDone:     make(chan bool),
         }
 
         if err := cl.init(); err != nil {
@@ -49,6 +60,10 @@ func New(path string, options *Options) (*CommitLog, error) {
         }
 
         if err := cl.open(); err != nil {
+                return nil, err
+        }
+
+        if err := cl.startWorker(); err != nil {
                 return nil, err
         }
 
@@ -103,6 +118,27 @@ func (cl *CommitLog) open() error {
         return nil
 }
 
+func (cl *CommitLog) startWorker() error {
+        go func() {
+                ticker := time.NewTicker(cl.options.CompactionInterval)
+
+                for {
+                        select {
+                        case <- cl.workerDone:
+                                break
+                        case <- ticker.C:
+                                cl.Compact()
+                        }
+                }
+        }()
+
+        return nil
+}
+
+func (cl *CommitLog) stopWorker() {
+        close(cl.workerDone)
+}
+
 func (cl *CommitLog) createNewSegment(offset int) error {
         seg, err := NewSegment(cl.Path, offset, cl.options)
         if err != nil {
@@ -124,6 +160,9 @@ func (cl *CommitLog) createNewSegment(offset int) error {
 }
 
 func (cl *CommitLog) Append(data []byte) (int, error) {
+        cl.mu.Lock()
+        defer cl.mu.Unlock()
+
         offset := cl.curSegment.NextOffset()
 
         if cl.curSegment.CheckFull(data) {
@@ -173,6 +212,8 @@ func (cl *CommitLog) Close() error {
                         return err
                 }
         }
+
+        cl.stopWorker()
 
         return nil
 }

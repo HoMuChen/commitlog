@@ -118,3 +118,11 @@ func (idx *timeIndex) Sync() error {
 func (idx *timeIndex) Close() error {
         return idx.f.Close()
 }
+
+func (idx *timeIndex) Remove() error {
+        if err := idx.Close(); err != nil {
+                return err
+        }
+
+        return os.Remove(idx.path)
+}

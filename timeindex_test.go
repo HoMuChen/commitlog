@@ -11,6 +11,7 @@ const (
 
 func TestTimeIndexWrite(t *testing.T) {
         setupDir(TIMEINDEX_DIR)
+        defer cleanupDir(TIMEINDEX_DIR)
 
         timeindex, err := NewTimeIndex(TIMEINDEX_DIR, 0, nil)
 
@@ -39,6 +40,4 @@ func TestTimeIndexWrite(t *testing.T) {
         if offset != 0 {
                 t.Errorf("Expect 0 but got: %v", offset)
         }
-
-        cleanupDir(TIMEINDEX_DIR)
 }

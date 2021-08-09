@@ -11,6 +11,7 @@ const (
 
 func TestWrite(t *testing.T) {
         setupDir(INDEX_DIR)
+        defer cleanupDir(INDEX_DIR)
 
         index, err := NewIndex(INDEX_DIR, 0, nil)
 
@@ -28,12 +29,11 @@ func TestWrite(t *testing.T) {
         if pos != 0 {
                 t.Errorf("Expect 0 but got: %v", pos)
         }
-
-        cleanupDir(INDEX_DIR)
 }
 
 func TestReopen(t *testing.T) {
         setupDir(INDEX_DIR)
+        defer cleanupDir(INDEX_DIR)
 
         index, err := NewIndex(INDEX_DIR, 1, nil)
         if err != nil {
@@ -56,8 +56,6 @@ func TestReopen(t *testing.T) {
         if pos != 0 {
                 t.Errorf("Expect 0 but got: %v", pos)
         }
-
-        cleanupDir(INDEX_DIR)
 }
 
 func setupDir(path string) {

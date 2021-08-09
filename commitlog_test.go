@@ -5,6 +5,7 @@ import (
         "io/ioutil"
         "os"
         "testing"
+        "time"
 )
 
 func TestNew(t *testing.T) {
@@ -35,7 +36,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewSegment(t *testing.T) {
-        cl, err := New("test.db", &Options{30}) //30 bytes max segment size
+        cl, err := New("test.db", &Options{30, time.Hour, time.Hour}) //30 bytes max segment size
         if err != nil {
                 t.Error(err)
         }

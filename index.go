@@ -102,3 +102,11 @@ func (idx *Index) Sync() error {
 func (idx *Index) Close() error {
         return idx.f.Close()
 }
+
+func (idx *Index) Remove() error {
+        if err := idx.Close(); err != nil {
+                return err
+        }
+
+        return os.Remove(idx.Path)
+}
